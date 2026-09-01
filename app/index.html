@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>حسابداری خانواده</title>
+<meta name="description" content="ثبت و تفکیک هزینه‌های مرغداری و اشخاص">
+<meta name="theme-color" content="#1f7a5a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="حسابداری">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar" id="topbar">
+    <div class="brandmark" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="3" y="14" width="4.6" height="7" rx="1.2"/><rect x="9.7" y="9" width="4.6" height="12" rx="1.2"/><rect x="16.4" y="4" width="4.6" height="17" rx="1.2"/></svg></div>
+    <h1>حسابداری خانواده<span class="sub" id="topSub">هزینه‌های مرغداری و اشخاص</span></h1>
+  </header>
+
+  <!-- ============ صفحه ثبت هزینه ============ -->
+  <section class="page on" id="page-add">
+    <div class="card">
+      <h2 id="formTitle">ثبت هزینه جدید</h2>
+
+      <div class="field">
+        <label for="fAmount">مبلغ <span class="req">*</span></label>
+        <div class="amount-wrap">
+          <input id="fAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="۰">
+          <span class="unit" id="fUnit">تومان</span>
+        </div>
+        <div class="amount-hint" id="fAmountHint"></div>
+      </div>
+
+      <div class="field">
+        <label for="fTitle">موضوع / بابت <span class="req">*</span></label>
+        <input id="fTitle" type="text" autocomplete="off" placeholder="مثلاً: خرید دان مرغ">
+        <div class="quick" id="fTitleSuggest"></div>
+      </div>
+
+      <div class="field">
+        <label>هزینه برای چه کسی / کجا؟ <span class="req">*</span></label>
+        <div class="pickgroup" id="fEntity"></div>
+      </div>
+
+      <div class="field">
+        <label>دسته‌بندی</label>
+        <div class="quick" id="fCategory"></div>
+      </div>
+
+      <div class="field">
+        <label>تاریخ</label>
+        <button type="button" class="datebtn" id="fDateBtn">
+          <span class="cal">🗓</span>
+          <span id="fDateLabel">—</span>
+          <span class="rel" id="fDateRel"></span>
+        </button>
+      </div>
+
+      <div class="field">
+        <label for="fNote">توضیحات (اختیاری)</label>
+        <textarea id="fNote" placeholder="جزئیات بیشتر…"></textarea>
+      </div>
+
+      <div class="row">
+        <button class="btn primary" id="fSave" style="flex:2">ثبت هزینه</button>
+        <button class="btn" id="fReset">پاک کردن</button>
+      </div>
+      <div class="row" id="fEditActions" hidden style="margin-top:10px">
+        <button class="btn danger block" id="fDelete">حذف این هزینه</button>
+      </div>
+    </div>
+
+    <div class="card" id="recentCard">
+      <h2>آخرین ثبت‌ها<span class="hint" id="recentHint"></span></h2>
+      <div id="recentList"></div>
+    </div>
+  </section>
+
+  <!-- ============ صفحه لیست هزینه‌ها ============ -->
+  <section class="page" id="page-list">
+    <div class="card">
+      <h2>جست‌وجو و فیلتر<span class="hint" id="filterCount"></span></h2>
+      <div class="field">
+        <input id="qSearch" type="search" placeholder="جست‌وجو در موضوع و توضیحات…">
+      </div>
+      <div class="field">
+        <label>دوره زمانی</label>
+        <div class="segmented" id="qPeriod"></div>
+      </div>
+      <div class="row" id="qCustomRange" hidden>
+        <div class="field" style="margin-bottom:0">
+          <label>از تاریخ</label>
+          <button type="button" class="datebtn" id="qFromBtn"><span class="cal">🗓</span><span id="qFromLabel">—</span></button>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>تا تاریخ</label>
+          <button type="button" class="datebtn" id="qToBtn"><span class="cal">🗓</span><span id="qToLabel">—</span></button>
+        </div>
+      </div>
+      <button class="btn sm block" id="qMoreBtn" style="margin-top:12px">
+        فیلتر بر اساس شخص و دسته‌بندی
+      </button>
+      <div id="qMore" hidden>
+        <div class="field" style="margin-top:12px">
+          <label>موجودیت</label>
+          <div class="pickgroup" id="qEntity"></div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>دسته‌بندی</label>
+          <div class="quick" id="qCategory"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat accent wide">
+        <div class="k">جمع هزینه‌های فیلترشده</div>
+        <div class="v" id="listTotal">۰ <small>تومان</small></div>
+      </div>
+    </div>
+
+    <div id="listBody"></div>
+  </section>
+
+  <!-- ============ صفحه گزارش ============ -->
+  <section class="page" id="page-report">
+    <div class="card">
+      <h2>دوره گزارش</h2>
+      <div class="segmented" id="rPeriod"></div>
+      <div class="row" id="rCustomRange" hidden style="margin-top:12px">
+        <div class="field" style="margin-bottom:0">
+          <label>از تاریخ</label>
+          <button type="button" class="datebtn" id="rFromBtn"><span class="cal">🗓</span><span id="rFromLabel">—</span></button>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>تا تاریخ</label>
+          <button type="button" class="datebtn" id="rToBtn"><span class="cal">🗓</span><span id="rToLabel">—</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat accent wide">
+        <div class="k" id="rTotalLabel">جمع کل</div>
+        <div class="v" id="rTotal">۰ <small>تومان</small></div>
+      </div>
+      <div class="stat">
+        <div class="k">تعداد هزینه</div>
+        <div class="v" id="rCount">۰</div>
+      </div>
+      <div class="stat">
+        <div class="k">میانگین هر هزینه</div>
+        <div class="v" id="rAvg">۰ <small>ت</small></div>
+      </div>
+      <div class="stat">
+        <div class="k">بیشترین هزینه‌بر</div>
+        <div class="v" id="rTopEntity">—</div>
+      </div>
+      <div class="stat">
+        <div class="k">بیشترین دسته</div>
+        <div class="v" id="rTopCat">—</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>تفکیک بر اساس موجودیت<span class="hint">مرغداری‌ها و اشخاص</span></h2>
+      <div class="bars" id="rByEntity"></div>
+    </div>
+
+    <div class="card">
+      <h2>تفکیک بر اساس دسته‌بندی</h2>
+      <div class="bars" id="rByCategory"></div>
+    </div>
+
+    <div class="card">
+      <h2>روند ماهانه</h2>
+      <div class="bars" id="rByMonth"></div>
+    </div>
+
+    <div class="card">
+      <h2>جدول موجودیت × دسته‌بندی<span class="hint">برای دیدن کامل، جدول را بکشید</span></h2>
+      <div class="tablewrap"><table id="rMatrix"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>خروجی گرفتن</h2>
+      <div class="row">
+        <button class="btn" id="rExportCsv">دریافت فایل CSV</button>
+        <button class="btn" id="rPrint">چاپ / PDF</button>
+      </div>
+      <p class="note" style="margin-bottom:0">فایل CSV با اکسل باز می‌شود و شامل همان هزینه‌های دوره‌ی انتخاب‌شده است.</p>
+    </div>
+  </section>
+
+  <!-- ============ صفحه تنظیمات ============ -->
+  <section class="page" id="page-settings">
+    <div class="card">
+      <h2>مرغداری‌ها و اشخاص</h2>
+      <div id="setEntities"></div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>افزودن مورد جدید</label>
+        <div class="row">
+          <input id="newEntityName" type="text" placeholder="نام مرغداری یا شخص" style="flex:2">
+          <select id="newEntityType">
+            <option value="farm">مرغداری</option>
+            <option value="worker">کارگر</option>
+            <option value="manager">مدیریت</option>
+            <option value="other">سایر</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn block" id="addEntity">افزودن</button>
+    </div>
+
+    <div class="card">
+      <h2>دسته‌بندی هزینه‌ها</h2>
+      <div id="setCategories"></div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>افزودن دسته‌بندی</label>
+        <input id="newCategoryName" type="text" placeholder="مثلاً: دارو و واکسن">
+      </div>
+      <button class="btn block" id="addCategory">افزودن</button>
+    </div>
+
+    <div class="card">
+      <h2>پشتیبان‌گیری و بازیابی</h2>
+      <p class="note">
+        همه‌ی اطلاعات فقط روی همین دستگاه ذخیره می‌شود و هیچ‌جا ارسال نمی‌شود.
+        برای انتقال به گوشی یا کامپیوتر دیگر، فایل پشتیبان بگیرید و آنجا بازیابی کنید.
+        پیشنهاد می‌شود هر ماه یک‌بار پشتیبان بگیرید.
+      </p>
+      <div class="row">
+        <button class="btn" id="btnExport">تهیه فایل پشتیبان</button>
+        <button class="btn" id="btnImport">بازیابی از فایل</button>
+      </div>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <div class="divider"></div>
+      <div class="note" id="storeInfo"></div>
+      <div class="divider"></div>
+      <button class="btn danger block" id="btnWipe">پاک کردن همه‌ی هزینه‌ها</button>
+    </div>
+
+    <div class="card">
+      <h2>راهنمای نصب</h2>
+      <p class="note">
+        <b>اندروید:</b> در مرورگر کروم، منوی سه‌نقطه ← «افزودن به صفحه اصلی» / «نصب برنامه».<br>
+        <b>ویندوز:</b> در مرورگر Edge یا Chrome، آیکون نصب کنار نوار آدرس ← «Install».<br>
+        بعد از نصب، برنامه بدون اینترنت هم کار می‌کند.
+      </p>
+      <button class="btn primary block" id="btnInstall" hidden>نصب برنامه روی این دستگاه</button>
+      <div class="divider"></div>
+      <p class="note" style="margin:0">نسخه <span id="appVersion">۱٫۰</span></p>
+    </div>
+  </section>
+</div>
+
+<button class="fab" id="fab" hidden>+</button>
+
+<nav class="tabbar">
+  <button data-tab="add" class="on">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>ثبت</span>
+  </button>
+  <button data-tab="list">
+    <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>هزینه‌ها</span>
+  </button>
+  <button data-tab="report">
+    <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15v-4M12 17V8M17 17v-6"/></svg><span>گزارش</span>
+  </button>
+  <button data-tab="settings">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H1a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 2.6 7a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H7a1.7 1.7 0 0 0 1-1.5V1a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V7a1.7 1.7 0 0 0 1.5 1H23a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>تنظیمات</span>
+  </button>
+</nav>
+
+<!-- تقویم شمسی -->
+<div class="modal" id="calModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="انتخاب تاریخ">
+    <h3>انتخاب تاریخ<button class="x" id="calClose" aria-label="بستن">×</button></h3>
+    <div class="calhead">
+      <button class="nav" id="calPrev" aria-label="ماه قبل"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="ttl" id="calTitle"></div>
+      <button class="nav" id="calNext" aria-label="ماه بعد"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+    </div>
+    <div class="calgrid" id="calGrid"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" id="calToday">امروز</button>
+      <button class="btn" id="calYesterday">دیروز</button>
+    </div>
+  </div>
+</div>
+
+<!-- تأیید -->
+<div class="modal" id="confirmModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true">
+    <h3 id="confirmTitle">تأیید</h3>
+    <p class="note" id="confirmText"></p>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" id="confirmNo">انصراف</button>
+      <button class="btn danger" id="confirmYes">بله</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden><div></div></div>
+
+<script src="jalali.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
