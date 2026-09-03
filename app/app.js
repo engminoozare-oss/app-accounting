@@ -100,8 +100,9 @@
 
   function defaultState() {
     return {
-      version: 1,
+      version: 2,
       currency: 'تومان',
+      metaUpdatedAt: 0,
       entities: [
         { id: 'e_dashtsabz', name: 'مرغداری دشت سبز', type: 'farm', active: true },
         { id: 'e_banaft', name: 'مرغداری بنافت', type: 'farm', active: true },
@@ -140,15 +141,33 @@
       if (!Array.isArray(s.categories)) s.categories = defaultState().categories;
       if (!s.currency) s.currency = 'تومان';
       s.entities.forEach(function (e) { if (e.active === undefined) e.active = true; });
-      return s;
+      return migrate(s);
     } catch (err) {
       console.error('خطا در خواندن داده‌ها', err);
       return defaultState();
     }
   }
 
-  var saveTimer = null;
-  function save() {
+  /* داده‌های نسخه‌های قبلی را برای همگام‌سازی آماده می‌کند */
+  function migrate(s) {
+    if (typeof s.metaUpdatedAt !== 'number') s.metaUpdatedAt = 0;
+    s.expenses.forEach(function (x) {
+      if (typeof x.updatedAt !== 'number') x.updatedAt = x.createdAt || Date.now();
+      if (typeof x.createdAt !== 'number') x.createdAt = x.updatedAt;
+      x.deleted = !!x.deleted;
+    });
+    s.version = 2;
+    return s;
+  }
+
+  /* هزینه‌های واقعی؛ رکوردهای حذف‌شده فقط نشانه‌ی حذف‌اند و شمرده نمی‌شوند */
+  function liveExpenses() {
+    return state.expenses.filter(function (x) { return !x.deleted; });
+  }
+
+  var saveTimer = null, pendingSync = false;
+  function save(skipSync) {
+    if (!skipSync) pendingSync = true;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
       try {
@@ -157,8 +176,13 @@
         toast('ذخیره نشد! حافظه دستگاه پر است.');
         console.error(err);
       }
+      if (pendingSync && window.Sync) window.Sync.nudge();
+      pendingSync = false;
     }, 60);
   }
+
+  /* هر تغییر در موجودیت‌ها یا دسته‌بندی‌ها باید به دستگاه‌های دیگر برسد */
+  function touchMeta() { state.metaUpdatedAt = Date.now(); }
 
   function entityById(id) {
     for (var i = 0; i < state.entities.length; i++) if (state.entities[i].id === id) return state.entities[i];
@@ -344,7 +368,7 @@
   /* پیشنهاد موضوع بر اساس ثبت‌های قبلی */
   function renderTitleSuggestions() {
     var counts = {};
-    state.expenses.forEach(function (x) {
+    liveExpenses().forEach(function (x) {
       if (!x.title) return;
       if (form.entityId && x.entityId !== form.entityId) return;
       counts[x.title] = (counts[x.title] || 0) + 1;
@@ -406,6 +430,7 @@
       return;
     }
 
+    var now = Date.now();
     state.expenses.push({
       id: uid(),
       amount: amount,
@@ -414,7 +439,9 @@
       categoryId: form.categoryId,
       date: form.date,
       note: $('fNote').value.trim(),
-      createdAt: Date.now()
+      createdAt: now,
+      updatedAt: now,
+      deleted: false
     });
     save();
     toast('ثبت شد: ' + money(amount) + ' ' + state.currency);
@@ -428,7 +455,9 @@
   $('fDelete').onclick = function () {
     var id = form.editingId;
     askConfirm('حذف هزینه', 'این هزینه برای همیشه حذف می‌شود. مطمئن هستید؟', function () {
-      state.expenses = state.expenses.filter(function (e) { return e.id !== id; });
+      state.expenses.forEach(function (e) {
+        if (e.id === id) { e.deleted = true; e.updatedAt = Date.now(); }
+      });
       save();
       toast('حذف شد');
       resetForm(false);
@@ -512,7 +541,7 @@
   function applyFilter(f) {
     var r = periodRange(f.period, f.from, f.to);
     var q = f.q.trim().toLowerCase();
-    return state.expenses.filter(function (x) {
+    return liveExpenses().filter(function (x) {
       if (x.date < r[0] || x.date > r[1]) return false;
       if (f.entityId && x.entityId !== f.entityId) return false;
       if (f.categoryId && x.categoryId !== f.categoryId) return false;
@@ -612,7 +641,7 @@
   /* ---------------- آخرین ثبت‌ها ---------------- */
 
   function renderRecent() {
-    var list = state.expenses.slice().sort(function (a, b) {
+    var list = liveExpenses().sort(function (a, b) {
       return (b.createdAt || 0) - (a.createdAt || 0);
     }).slice(0, 5);
     if (!list.length) {
@@ -623,7 +652,7 @@
     }
     var t = Jalali.isoToJalali(Jalali.todayIso());
     var r = Jalali.monthRange(t.jy, t.jm);
-    var monthTotal = sum(state.expenses.filter(function (x) { return x.date >= r[0] && x.date <= r[1]; }));
+    var monthTotal = sum(liveExpenses().filter(function (x) { return x.date >= r[0] && x.date <= r[1]; }));
     $('recentHint').textContent = Jalali.MONTHS[t.jm - 1] + ': ' + money(monthTotal) + ' ' + state.currency;
     $('recentList').innerHTML = '<div class="items">' + list.map(function (x) {
       return itemHtml(x).replace('<div class="m">', '<div class="m">' + fdate(x.date) + ' · ');
@@ -817,7 +846,7 @@
       var list = state.entities.filter(function (e) { return e.type === type; });
       if (!list.length) return;
       list.forEach(function (e) {
-        var used = state.expenses.filter(function (x) { return x.entityId === e.id; });
+        var used = liveExpenses().filter(function (x) { return x.entityId === e.id; });
         eh += '<div class="listrow">' +
           '<span class="nm"' + (e.active ? '' : ' style="opacity:.5"') + '>' + esc(e.name) + '</span>' +
           '<span class="tag">' + ENTITY_TYPES[e.type] + '</span>' +
@@ -832,7 +861,7 @@
     $('setEntities').innerHTML = eh || '<div class="note">موردی ثبت نشده.</div>';
 
     var ch = state.categories.map(function (c) {
-      var used = state.expenses.filter(function (x) { return x.categoryId === c.id; });
+      var used = liveExpenses().filter(function (x) { return x.categoryId === c.id; });
       return '<div class="listrow"><span class="nm">' + esc(c.name) + '</span>' +
         '<span class="tag">' + toFa(used.length) + ' هزینه</span>' +
         '<button class="iconbtn" data-act="rename-c" data-id="' + c.id + '" title="تغییر نام">✏️</button>' +
@@ -842,7 +871,7 @@
 
     var bytes = 0;
     try { bytes = new Blob([JSON.stringify(state)]).size; } catch (e) { bytes = 0; }
-    $('storeInfo').innerHTML = 'در مجموع <b>' + toFa(state.expenses.length) +
+    $('storeInfo').innerHTML = 'در مجموع <b>' + toFa(liveExpenses().length) +
       '</b> هزینه ثبت شده است (حدود ' + toFa(Math.max(1, Math.round(bytes / 1024))) + ' کیلوبایت).';
   }
 
@@ -853,12 +882,12 @@
     if (!ent) return;
     if (b.dataset.act === 'rename-e') {
       var nn = prompt('نام جدید:', ent.name);
-      if (nn && nn.trim()) { ent.name = nn.trim(); save(); renderAll(); }
+      if (nn && nn.trim()) { ent.name = nn.trim(); touchMeta(); save(); renderAll(); }
     } else if (b.dataset.act === 'toggle-e') {
-      ent.active = !ent.active; save(); renderAll();
+      ent.active = !ent.active; touchMeta(); save(); renderAll();
       toast(ent.active ? 'فعال شد' : 'از فهرست ثبت پنهان شد');
     } else if (b.dataset.act === 'del-e') {
-      var n = state.expenses.filter(function (x) { return x.entityId === id; }).length;
+      var n = liveExpenses().filter(function (x) { return x.entityId === id; }).length;
       if (n) {
         toast('اول ' + toFa(n) + ' هزینه‌ی این مورد را حذف کنید یا آن را غیرفعال کنید');
         return;
@@ -866,7 +895,7 @@
       askConfirm('حذف', '«' + ent.name + '» حذف شود؟', function () {
         state.entities = state.entities.filter(function (x) { return x.id !== id; });
         if (form.entityId === id) form.entityId = null;
-        save(); renderAll(); toast('حذف شد');
+        touchMeta(); save(); renderAll(); toast('حذف شد');
       });
     }
   });
@@ -878,14 +907,14 @@
     if (!cat) return;
     if (b.dataset.act === 'rename-c') {
       var nn = prompt('نام جدید:', cat.name);
-      if (nn && nn.trim()) { cat.name = nn.trim(); save(); renderAll(); }
+      if (nn && nn.trim()) { cat.name = nn.trim(); touchMeta(); save(); renderAll(); }
     } else if (b.dataset.act === 'del-c') {
-      var n = state.expenses.filter(function (x) { return x.categoryId === id; }).length;
+      var n = liveExpenses().filter(function (x) { return x.categoryId === id; }).length;
       if (n) { toast('این دسته در ' + toFa(n) + ' هزینه استفاده شده است'); return; }
       askConfirm('حذف', '«' + cat.name + '» حذف شود؟', function () {
         state.categories = state.categories.filter(function (x) { return x.id !== id; });
         if (form.categoryId === id) form.categoryId = null;
-        save(); renderAll(); toast('حذف شد');
+        touchMeta(); save(); renderAll(); toast('حذف شد');
       });
     }
   });
@@ -895,14 +924,14 @@
     if (!name) { toast('نام را وارد کنید'); return; }
     state.entities.push({ id: uid(), name: name, type: $('newEntityType').value, active: true });
     $('newEntityName').value = '';
-    save(); renderAll(); toast('اضافه شد');
+    touchMeta(); save(); renderAll(); toast('اضافه شد');
   };
   $('addCategory').onclick = function () {
     var name = $('newCategoryName').value.trim();
     if (!name) { toast('نام را وارد کنید'); return; }
     state.categories.push({ id: uid(), name: name });
     $('newCategoryName').value = '';
-    save(); renderAll(); toast('اضافه شد');
+    touchMeta(); save(); renderAll(); toast('اضافه شد');
   };
 
   /* ---------------- پشتیبان‌گیری ---------------- */
@@ -932,13 +961,16 @@
         return;
       }
       askConfirm('بازیابی اطلاعات',
-        'اطلاعات فعلی (' + toFa(state.expenses.length) + ' هزینه) با اطلاعات فایل (' +
-        toFa(incoming.expenses.length) + ' هزینه) جایگزین می‌شود. ادامه می‌دهید؟',
+        'اطلاعات فعلی (' + toFa(liveExpenses().length) + ' هزینه) با اطلاعات فایل (' +
+        toFa(incoming.expenses.filter(function (x) { return !x.deleted; }).length) +
+        ' هزینه) جایگزین می‌شود. ادامه می‌دهید؟',
         function () {
-          state = incoming;
+          state = migrate(incoming);
           if (!Array.isArray(state.categories)) state.categories = defaultState().categories;
           if (!state.currency) state.currency = 'تومان';
           state.entities.forEach(function (e) { if (e.active === undefined) e.active = true; });
+          state.metaUpdatedAt = Date.now();
+          state.expenses.forEach(function (x) { x.syncedAt = 0; });
           save();
           resetForm(false);
           renderAll();
@@ -951,11 +983,12 @@
 
   $('btnWipe').onclick = function () {
     askConfirm('پاک کردن همه هزینه‌ها',
-      'همه‌ی ' + toFa(state.expenses.length) + ' هزینه حذف می‌شود. ' +
+      'همه‌ی ' + toFa(liveExpenses().length) + ' هزینه حذف می‌شود. ' +
       'مرغداری‌ها، اشخاص و دسته‌بندی‌ها باقی می‌مانند. ' +
       'اگر پشتیبان نگرفته‌اید اول پشتیبان بگیرید!',
       function () {
-        state.expenses = [];
+        var t = Date.now();
+        state.expenses.forEach(function (x) { x.deleted = true; x.updatedAt = t; });
         save(); resetForm(false); renderAll(); toast('همه هزینه‌ها پاک شد');
       });
   };
@@ -1003,6 +1036,188 @@
   $('appVersion').textContent = toFa(APP_VERSION).replace('.', '٫');
   renderAll();
   go('add');
+
+  /* ---------------- همگام‌سازی بین دستگاه‌ها ---------------- */
+
+  function syncFields(r) {
+    return {
+      amount: Math.round(Number(r.amount) || 0),
+      title: r.title || '',
+      entityId: r.entityId || null,
+      categoryId: r.categoryId || null,
+      date: r.date || Jalali.todayIso(),
+      note: r.note || '',
+      createdAt: Number(r.createdAt) || Number(r.updatedAt) || Date.now(),
+      updatedAt: Number(r.updatedAt) || 0,
+      deleted: !!r.deleted,
+      syncedAt: Number(r.updatedAt) || 0
+    };
+  }
+
+  function bindSync() {
+    if (!window.Sync) return;
+
+    Sync.bind({
+      /* رکوردهایی که هنوز روی سرور ثبت نشده‌اند */
+      getDirty: function () {
+        return state.expenses.filter(function (x) {
+          return !x.syncedAt || x.updatedAt > x.syncedAt;
+        });
+      },
+      markSynced: function (ids, stamp) {
+        var set = {};
+        ids.forEach(function (i) { set[i] = 1; });
+        state.expenses.forEach(function (x) {
+          if (set[x.id]) x.syncedAt = Math.max(Number(x.updatedAt) || 0, stamp);
+        });
+        save(true);
+      },
+      /* ادغام رکوردهای سرور با محلی — تازه‌ترین نسخه برنده است */
+      mergeRemote: function (remote) {
+        var byId = {}, changed = 0;
+        state.expenses.forEach(function (x) { byId[x.id] = x; });
+        remote.forEach(function (r) {
+          var local = byId[r.id];
+          var f = syncFields(r);
+          if (!local) {
+            f.id = r.id;
+            state.expenses.push(f);
+            byId[r.id] = f;
+            changed++;
+          } else if (f.updatedAt > (Number(local.updatedAt) || 0)) {
+            Object.keys(f).forEach(function (k) { local[k] = f[k]; });
+            changed++;
+          } else if (f.updatedAt === (Number(local.updatedAt) || 0) && !local.syncedAt) {
+            local.syncedAt = f.updatedAt;
+          }
+        });
+        if (changed) save(true);
+        return changed;
+      },
+      getMeta: function () {
+        return {
+          entities: state.entities,
+          categories: state.categories,
+          updatedAt: Number(state.metaUpdatedAt) || 0
+        };
+      },
+      setMeta: function (key, items, updatedAt) {
+        state[key] = items;
+        state.metaUpdatedAt = updatedAt;
+        save(true);
+      },
+      afterSync: function (info) {
+        renderAll();
+        if (info.pulled) {
+          toast(toFa(info.pulled) + ' مورد از دستگاه‌های دیگر دریافت شد');
+        }
+      }
+    });
+
+    Sync.onStatus(renderSyncStatus);
+    Sync.start();
+  }
+
+  var SYNC_LABELS = {
+    off: 'خاموش',
+    idle: 'روشن',
+    syncing: 'در حال همگام‌سازی…',
+    offline: 'بدون اینترنت',
+    error: 'خطا'
+  };
+
+  function renderSyncStatus(s) {
+    var badge = $('syncStatus');
+    if (!badge) return;
+    badge.textContent = SYNC_LABELS[s.state] || s.state;
+    badge.style.color = s.state === 'error' ? 'var(--danger)'
+      : (s.state === 'idle' ? 'var(--brand)' : 'var(--muted)');
+
+    var on = window.Sync && Sync.isOn();
+    $('syncOff').hidden = on || !$('syncForm').hidden;
+    $('syncOn').hidden = !on;
+    if (on) {
+      var cfg = Sync.getConfig();
+      $('syncBookShow').value = cfg.book;
+      var note = '';
+      if (s.state === 'error') note = 'مشکل: ' + s.message;
+      else if (s.state === 'offline') note = 'وقتی اینترنت وصل شود، خودکار همگام می‌شود.';
+      else if (s.lastAt) note = 'آخرین همگام‌سازی: ' + clockFa(s.lastAt);
+      else note = 'در انتظار اولین همگام‌سازی…';
+      $('syncNote').textContent = note;
+    }
+  }
+
+  function clockFa(ms) {
+    var d = new Date(ms);
+    return toFa(Jalali.pad2(d.getHours()) + ':' + Jalali.pad2(d.getMinutes()));
+  }
+
+  function showSyncForm(show) {
+    $('syncForm').hidden = !show;
+    $('syncOff').hidden = show || (window.Sync && Sync.isOn());
+    if (show) {
+      var cfg = (window.Sync && Sync.getConfig()) || {};
+      $('syncApiKey').value = cfg.apiKey || '';
+      $('syncProjectId').value = cfg.projectId || '';
+      $('syncBook').value = cfg.book || '';
+    }
+  }
+
+  if ($('syncSetupBtn')) {
+    $('syncSetupBtn').onclick = function () { showSyncForm(true); };
+    $('syncCancel').onclick = function () { showSyncForm(false); };
+    $('syncNewCode').onclick = function () {
+      $('syncBook').value = Sync.newCode();
+      toast('کد ساخته شد — آن را جایی یادداشت کنید');
+    };
+    $('syncSave').onclick = function () {
+      var apiKey = $('syncApiKey').value.trim();
+      var projectId = $('syncProjectId').value.trim();
+      var book = Sync.normalizeCode($('syncBook').value);
+      if (!apiKey) { toast('کلید API را وارد کنید'); return; }
+      if (!projectId) { toast('شناسه پروژه را وارد کنید'); return; }
+      if (book.replace(/-/g, '').length < 24) {
+        toast('کد خانواده باید حداقل ۲۴ حرف باشد — «ساخت کد جدید» را بزنید');
+        return;
+      }
+      /* هزینه‌های موجود باید یک‌بار به سرور بروند */
+      state.expenses.forEach(function (x) { x.syncedAt = 0; });
+      save(true);
+      Sync.setConfig({ apiKey: apiKey, projectId: projectId, book: book });
+      showSyncForm(false);
+      renderSyncStatus(Sync.status());
+      toast('همگام‌سازی روشن شد');
+    };
+    $('syncCopy').onclick = function () {
+      var el = $('syncBookShow');
+      el.select();
+      var done = false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(el.value);
+        done = true;
+      } else {
+        try { done = document.execCommand('copy'); } catch (e) { done = false; }
+      }
+      toast(done ? 'کد کپی شد' : 'کد را دستی بردارید');
+    };
+    $('syncNow').onclick = function () {
+      toast('در حال همگام‌سازی…');
+      Sync.syncNow({ full: true });
+    };
+    $('syncOffBtn').onclick = function () {
+      askConfirm('خاموش کردن همگام‌سازی',
+        'اطلاعات روی این دستگاه می‌ماند، ولی دیگر با دستگاه‌های دیگر همگام نمی‌شود. ادامه می‌دهید؟',
+        function () {
+          Sync.setConfig(null);
+          showSyncForm(false);
+          renderSyncStatus(Sync.status());
+          toast('همگام‌سازی خاموش شد');
+        });
+    };
+  }
+
+  bindSync();
 
   /* نصب برنامه */
   var deferredPrompt = null;

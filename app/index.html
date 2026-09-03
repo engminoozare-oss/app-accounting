@@ -230,6 +230,59 @@
       <button class="btn block" id="addCategory">افزودن</button>
     </div>
 
+    <div class="card" id="syncCard">
+      <h2>همگام‌سازی بین دستگاه‌ها<span class="hint" id="syncStatus">خاموش</span></h2>
+
+      <div id="syncOff">
+        <p class="note">
+          با روشن کردن همگام‌سازی، هزینه‌هایی که روی یک گوشی وارد می‌شود روی بقیه‌ی
+          گوشی‌ها و کامپیوتر هم دیده می‌شود. برای این کار یک‌بار باید یک پایگاه داده‌ی
+          رایگان گوگل (Firebase) بسازید. راهنمای مرحله‌به‌مرحله در فایل
+          <span dir="ltr">README</span> پروژه هست.
+        </p>
+        <button class="btn primary block" id="syncSetupBtn">راه‌اندازی همگام‌سازی</button>
+      </div>
+
+      <div id="syncForm" hidden>
+        <div class="field">
+          <label for="syncApiKey">کلید API <span dir="ltr">(apiKey)</span></label>
+          <input id="syncApiKey" type="text" dir="ltr" autocomplete="off" placeholder="AIza…">
+        </div>
+        <div class="field">
+          <label for="syncProjectId">شناسه پروژه <span dir="ltr">(projectId)</span></label>
+          <input id="syncProjectId" type="text" dir="ltr" autocomplete="off" placeholder="my-project-1234">
+        </div>
+        <div class="field">
+          <label for="syncBook">کد خانواده</label>
+          <input id="syncBook" type="text" dir="ltr" autocomplete="off" placeholder="XXXX-XXXX-…">
+          <div class="quick"><button type="button" class="chip" id="syncNewCode">ساخت کد جدید</button></div>
+          <p class="note" style="margin-bottom:0">
+            روی <b>اولین</b> دستگاه «ساخت کد جدید» را بزنید و همان کد را روی بقیه‌ی دستگاه‌ها
+            وارد کنید. این کد مثل رمز عبور است؛ هر کسی آن را داشته باشد به حساب‌ها دسترسی دارد.
+          </p>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="syncSave" style="flex:2">روشن کردن</button>
+          <button class="btn" id="syncCancel">انصراف</button>
+        </div>
+      </div>
+
+      <div id="syncOn" hidden>
+        <div class="field">
+          <label>کد خانواده</label>
+          <div class="row">
+            <input id="syncBookShow" type="text" dir="ltr" readonly style="flex:2">
+            <button class="btn" id="syncCopy">کپی</button>
+          </div>
+        </div>
+        <p class="note" id="syncNote"></p>
+        <div class="row">
+          <button class="btn primary" id="syncNow" style="flex:2">همگام‌سازی الان</button>
+          <button class="btn danger" id="syncOffBtn">خاموش کردن</button>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <h2>پشتیبان‌گیری و بازیابی</h2>
       <p class="note">
@@ -311,6 +364,7 @@
 <div class="toast" id="toast" hidden><div></div></div>
 
 <script src="jalali.js"></script>
+<script src="sync.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
