@@ -237,13 +237,54 @@
         <p class="note">
           با روشن کردن همگام‌سازی، هزینه‌هایی که روی یک گوشی وارد می‌شود روی بقیه‌ی
           گوشی‌ها و کامپیوتر هم دیده می‌شود. برای این کار یک‌بار باید یک پایگاه داده‌ی
-          رایگان گوگل (Firebase) بسازید. راهنمای مرحله‌به‌مرحله در فایل
-          <span dir="ltr">README</span> پروژه هست.
+          رایگان گوگل (Firebase) بسازید — کارت بانکی لازم نیست.
         </p>
         <button class="btn primary block" id="syncSetupBtn">راه‌اندازی همگام‌سازی</button>
       </div>
 
       <div id="syncForm" hidden>
+        <details class="guide">
+          <summary>راهنمای گرفتن این دو مقدار از فایربیس (یک‌بار)</summary>
+          <p class="note">
+            در کنسول فایربیس، اسم دسته‌های منو هر چند وقت عوض می‌شود. مطمئن‌ترین راه این است
+            که نام محصول را در کادر <span dir="ltr">Search for products</span> بالای منوی چپ
+            تایپ کنید.
+          </p>
+          <ol class="note">
+            <li>
+              در <span dir="ltr">console.firebase.google.com</span> یک پروژه بسازید
+              (<span dir="ltr">Create a project</span>) و
+              <span dir="ltr">Google Analytics</span> را خاموش بگذارید.
+            </li>
+            <li>
+              <span dir="ltr">Firestore</span> را جست‌وجو کنید ←
+              <b><span dir="ltr">Firestore Database</span></b> ←
+              <span dir="ltr">Create database</span> ← منطقه‌ی نزدیک ←
+              حالت <span dir="ltr">Production mode</span>.
+              <br><b>نه</b> <span dir="ltr">Realtime Database</span>؛ آن محصول دیگری است.
+            </li>
+            <li>
+              در همان صفحه تب <b><span dir="ltr">Rules</span></b> ← متن فایل
+              <span dir="ltr">firestore.rules</span> پروژه را جای متن موجود بگذارید ←
+              <span dir="ltr">Publish</span>.
+            </li>
+            <li>
+              <span dir="ltr">Authentication</span> را جست‌وجو کنید ←
+              <span dir="ltr">Get started</span> ← تب
+              <span dir="ltr">Sign-in method</span> ←
+              <b><span dir="ltr">Anonymous</span></b> را فعال کنید ←
+              <span dir="ltr">Save</span>.
+            </li>
+            <li>
+              در <span dir="ltr">Project Overview</span> دکمه‌ی
+              <span dir="ltr">+ Add app</span> ← آیکون <span dir="ltr">&lt;/&gt;</span>
+              (وب) ← یک نام ← <span dir="ltr">Register app</span>.
+              از کدی که نشان می‌دهد، <span dir="ltr">apiKey</span> و
+              <span dir="ltr">projectId</span> را بردارید.
+              بعداً هم از <span dir="ltr">Settings → General → Your apps</span> پیدا می‌شود.
+            </li>
+          </ol>
+        </details>
         <div class="field">
           <label for="syncApiKey">کلید API <span dir="ltr">(apiKey)</span></label>
           <input id="syncApiKey" type="text" dir="ltr" autocomplete="off" placeholder="AIza…">

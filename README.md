@@ -85,22 +85,52 @@ https://engminoozare-oss.github.io/app-accounting/
 دستگاه‌ها هم می‌آید. برنامه از **Cloud Firestore** گوگل استفاده می‌کند که برای این
 حجم کار کاملاً رایگان است (نیازی به وارد کردن کارت بانکی نیست).
 
-### مرحله ۱ — ساخت پروژه (یک‌بار، حدود ۵ دقیقه)
+### مرحله ۱ — ساخت پروژه و آماده کردن آن (یک‌بار، حدود ۵ دقیقه)
+
+> کنسول فایربیس منوی خود را تغییر می‌دهد و اسم دسته‌ها هر چند وقت عوض می‌شود.
+> **مطمئن‌ترین راه:** از کادر **Search for products** بالای منوی چپ استفاده کنید و
+> نام محصول را تایپ کنید. مسیرهای منو را هم برای راحتی نوشته‌ام.
 
 ۱. به <span dir="ltr">https://console.firebase.google.com</span> بروید و با حساب گوگل وارد شوید.
-۲. **Create a project** ← یک نام دلخواه (مثلاً `hesab-ketab`) ← Google Analytics را
+
+۲. **Create a project** ← یک نام دلخواه (مثلاً `hesab ketab`) ← Google Analytics را
    **خاموش** کنید ← Create project.
-۳. از منوی راست: **Build → Firestore Database → Create database** ←
-   حالت **Production mode** ← نزدیک‌ترین منطقه (مثلاً `europe-west`) ← Enable.
-۴. در همان صفحه، تب **Rules**: محتوای فایل `firestore.rules` این پروژه را کپی کنید،
-   جایگزین متن موجود کنید و **Publish** را بزنید.
-۵. از منوی راست: **Build → Authentication → Get started** ← تب **Sign-in method** ←
-   **Anonymous** را انتخاب و **Enable** کنید ← Save.
-۶. روی چرخ‌دنده‌ی بالای منو ← **Project settings** ← پایین صفحه در بخش *Your apps*
-   روی آیکون **`</>`** (Web) بزنید ← یک نام بدهید ← Register app.
-   حالا دو مقدار به شما نشان داده می‌شود که لازم دارید:
-   - **`apiKey`** (با `AIza` شروع می‌شود)
-   - **`projectId`**
+   بالای صفحه باید نشان **Spark plan** را ببینید؛ یعنی رایگان است و کارت بانکی نمی‌خواهد.
+
+۳. **ساخت پایگاه داده Firestore:**
+   در کادر جست‌وجو `Firestore` را تایپ کنید و **Firestore Database** را بزنید
+   (در منو: **Databases & Storage → Firestore Database**).
+   بعد: **Create database** ← منطقه‌ی نزدیک (مثلاً `europe-west`) ←
+   حالت **Production mode** ← Create / Enable.
+
+   ⚠️ حتماً **Firestore Database** باشد، نه **Realtime Database**؛ این دو محصول
+   جدا هستند و برنامه از Firestore استفاده می‌کند.
+
+۴. **گذاشتن قوانین دسترسی:**
+   در همان صفحه‌ی Firestore، تب **Rules** را باز کنید.
+   محتوای فایل `firestore.rules` این پروژه را کپی کنید، **کل متن موجود را با آن
+   جایگزین** کنید و **Publish** را بزنید.
+
+۵. **روشن کردن ورود ناشناس:**
+   در کادر جست‌وجو `Authentication` را تایپ کنید و آن را بزنید
+   (در منو: **Security → Authentication**).
+   بعد: **Get started** ← تب **Sign-in method** ← از فهرست **Anonymous** را انتخاب کنید
+   ← کلید **Enable** را روشن کنید ← **Save**.
+
+۶. **برداشتن دو مقدار مورد نیاز:**
+   به صفحه‌ی **Project Overview** برگردید و دکمه‌ی **+ Add app** را بزنید
+   (یا از منوی چپ: **Settings → General** و پایین صفحه بخش *Your apps*).
+   آیکون **`</>`** یعنی Web را انتخاب کنید ← یک نام دلخواه بدهید ←
+   **Register app**.
+
+   حالا یک قطعه کد نشانتان می‌دهد. از داخل آن فقط این دو خط را لازم دارید:
+
+   ```
+   apiKey: "AIza..............................."
+   projectId: "hesab-ketab-xxxxx"
+   ```
+
+   اگر این صفحه را بستید، همیشه از **Settings → General → Your apps** پیدا می‌شود.
 
 ### مرحله ۲ — روشن کردن روی دستگاه اول
 

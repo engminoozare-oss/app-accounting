@@ -316,3 +316,21 @@ body.printing #printArea{display:block;padding:16px}
   body{background:#fff;color:#000}
   @page{margin:12mm}
 }
+
+/* ---------- راهنمای بازشو ---------- */
+.guide{
+  border:1px solid var(--border);border-radius:12px;background:var(--surface-2);
+  padding:10px 12px;margin-bottom:14px;
+}
+.guide summary{
+  cursor:pointer;font-weight:600;font-size:.88rem;list-style:none;
+  display:flex;align-items:center;gap:6px;
+}
+.guide summary::-webkit-details-marker{display:none}
+.guide summary::before{content:'▾';color:var(--brand);transition:transform .15s}
+.guide:not([open]) summary::before{transform:rotate(90deg)}
+.guide[open] summary{margin-bottom:8px}
+.guide ol{margin:0;padding-inline-start:20px}
+.guide ol li{margin-bottom:9px}
+.guide ol li:last-child{margin-bottom:0}
+.guide .note{margin:0 0 8px}
